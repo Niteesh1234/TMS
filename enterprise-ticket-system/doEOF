@@ -1,0 +1,249 @@
+cat > .gitignore <<'EOF'
+node_modules
+.next
+.env
+.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.e"m.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.e"m.envbC.eck.envbC.eck.envbC.eck"p.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.e"m.envbC.eck.envbC.eckcl.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.e"m.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.e"m.envbC.eck.envbC.eck.envbC.eck"p.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.e"m.envbC.eck.envbC.eckcl.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.e"m.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.e"m.envbC.eck.envbC.eck.envbC.eck"p.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck.envbC.eck  .envbC.ec   String     @id @default(cuid())
+  name            String
+  email           String     @unique
+  passwordHash    String
+  role            Role       @default(EMPLOYEE)
+  isActive        Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  createdTickets  Ticket[]   @relation("CreatedTickets")
+  assignedTickets Ticket[]   @relation("AssignedTickets")
+  comments        Comment[]
+  auditLogs       AuditLog[]
+
+  @@index([role])
+}
+
+model Ticket {
+  id            String       @id @default(cuid())
+  ticketNumber  String       @unique
+  title         String
+  description   String
+  category      String
+  priority      Priority
+  status        TicketStatus @default(OPEN)
+  createdById   String
+  assignedToId  String?
+  dueDate       DateTime?
+  slaBreached   Boolean      @default(false)
+  attachmentUrl String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  createdBy     User         @relation("CreatedTickets", fields: [createdById], references: [id])
+  assignedTo    User?        @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  comments      Comment[]
+  auditLogs     AuditLog[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([createdById])
+  @@index([assignedToId])
+  @@index([createdAt])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  ticketId  String
+  userId    String
+  message   String
+  createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([ticketId])
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  ticketId  String?
+  userId    String
+  action    String
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime @default(now())
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([ticketId])
+  @@index([userId])
+  @@index([createdAt])
+}
+EOF
+cat > lib/db.ts <<'EOF'
+import { PrismaClient } from "@prisma/client";
+
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({
+  log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"]
+});
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+EOF
+cat > lib/utils.ts <<'EOF'
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+export function formatDate(value?: string | Date | null) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+}
+
+export function titleCase(value: string) {
+  return value.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+}
+EOF
+cat > lib/sla.ts <<'EOF'
+import { Priority, TicketStatus, type Ticket } from "@prisma/client";
+
+const SLA_HOURS: Record<Priority, number> = {
+  CRITICAL: 24,
+  HIGH: 48,
+  MEDIUM: 72,
+  LOW: 120
+};
+
+export function calculateDueDate(priority: Priority, from = new Date()) {
+  const due = new Date(from);
+  due.setHours(due.getHours() + SLA_HOURS[priority]);
+  return due;
+}
+
+export function isSlaBreached(ticket: Pick<Ticket, "dueDate" | "status">) {
+  if (!ticket.dueDate) return false;
+  if ([TicketStatus.RESOLVED, TicketStatus.CLOSED].includes(ticket.status)) return false;
+  return new Date() > ticket.dueDate;
+}
+EOF
+cat > lib/permissions.ts <<'EOF'
+import { Role, type Ticket } from "@prisma/client";
+
+export type AuthUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+};
+
+export const isManagerOrAdmin = (role: Role) => role === Role.MANAGER || role === Role.ADMIN;
+export const canManageUsers = (role: Role) => role === Role.ADMIN;
+export const canViewAllTickets = (role: Role) => role === Role.MANAGER || role === Role.ADMIN;
+export const canAssignTickets = (role: Role) => role === Role.MANAGER || role === Role.ADMIN;
+export const canChangeTicketStatus = (role: Role) => role === Role.AGENT || role === Role.MANAGER || role === Role.ADMIN;
+export const canViewAuditLogs = (role: Role) => role === Role.MANAGER || role === Role.ADMIN;
+
+export function canAccessTicket(user: AuthUser, ticket: Pick<Ticket, "createdById" | "assignedToId">) {
+  if (canViewAllTickets(user.role)) return true;
+  if (user.role === Role.AGENT) return ticket.assignedToId === user.id;
+  return ticket.createdById === user.id;
+}
+EOF
+cat > lib/auth.ts <<'EOF'
+import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { jwtVerify, SignJWT } from "jose";
+import { Role } from "@prisma/client";
+import { prisma } from "@/lib/db";
+import type { AuthUser } from "@/lib/permissions";
+
+const COOKIE_NAME = "ets_token";
+const DEFAULT_SECRET = "development-secret-change-me-please-32-chars";
+
+function getSecret() {
+  return new TextEncoder().encode(process.env.JWT_SECRET || DEFAULT_SECRET);
+}
+
+export async function hashPassword(password: string) {
+  return bcrypt.hash(password, 12);
+}
+
+export async function verifyPassword(password: string, hash: string) {
+  return bcrypt.compare(password, hash);
+}
+
+export async function createToken(user: AuthUser) {
+  return new SignJWT(user)
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(user.id)
+    .setIssuedAt()
+    .setExpirationTime("8h")
+    .sign(getSecret());
+}
+
+export function setAuthCookie(response: NextResponse, token: string) {
+  response.cookies.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 8,
+    path: "/"
+  });
+}
+
+export function clearAuthCookie(response: NextResponse) {
+  response.cookies.set(COOKIE_NAME, "", { maxAge: 0, path: "/" });
+}
+
+async function decodeToken(token?: string): Promise<AuthUser | null> {
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, getSecret());
+    return {
+      id: String(payload.id),
+      name: String(payload.name),
+      email: String(payload.email),
+      role: payload.role as Role
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function getCurrentUserFromRequest(request: NextRequest) {
+  const token = request.cookies.get(COOKIE_NAME)?.value;
+  const payload = await decodeToken(token);
+  if (!payload) return null;
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.id },
+    select: { id: true, name: true, email: true, role: true, isActive: true }
+  });
+  if (!user?.isActive) return null;
+  return { id: user.id, name: user.name, email: user.email, role: user.role };
+}
+
+export async function getCurrentUser() {
+  const token = cookies().get(COOKIE_NAME)?.value;
+  const payload = await decodeToken(token);
+  if (!payload) return null;
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.id },
+    select: { id: true, name: true, email: true, role: true, isActive: true }
+  });
+  if (!user?.isActive) return null;
+  return { id: user.id, name: user.name, email: user.email, role: user.role };
+}
+
+export function unauthorized() {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
+export function forbidden() {
+  return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+}
+EOF
+cat > types/index.ts <<'EOF'
+export type ApiError = { error: string };
+EOF
+printf '\nCreated foundational config, Prisma schema, and backend utility files.\n'
