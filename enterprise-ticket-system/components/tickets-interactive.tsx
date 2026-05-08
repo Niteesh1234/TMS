@@ -12,6 +12,8 @@ type TicketsInteractiveProps = {
     priorityRisk: string;
     riskSummary: string;
   };
+  initialSearch?: string;
+  createdCode?: string;
 };
 
 const PAGE_SIZE = 12;
@@ -29,8 +31,8 @@ function getPriorityClass(priority: string) {
   }
 }
 
-export function TicketsInteractive({ tickets, summary }: TicketsInteractiveProps) {
-  const [search, setSearch] = useState("");
+export function TicketsInteractive({ tickets, summary, initialSearch = "", createdCode }: TicketsInteractiveProps) {
+  const [search, setSearch] = useState(initialSearch);
   const [priority, setPriority] = useState("All");
   const [status, setStatus] = useState("All");
   const [page, setPage] = useState(1);
@@ -70,6 +72,12 @@ export function TicketsInteractive({ tickets, summary }: TicketsInteractiveProps
   return (
     <div className="grid gap-6 xl:grid-cols-[1.8fr_1fr]">
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {createdCode ? (
+          <div className="border-b border-emerald-100 bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-700">
+            Ticket {createdCode} was created successfully and added to MongoDB.
+          </div>
+        ) : null}
+
         <div className="flex flex-col gap-4 border-b border-slate-200 p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
