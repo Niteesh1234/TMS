@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Activity, BarChart3, TrendingUp, Users } from "lucide-react";
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import type { DashboardMetricRecord, SupportTeamRecord, WorkflowStageRecord } from "../types/dashboard";
 
@@ -18,10 +19,34 @@ type AnalyticsInteractiveProps = {
 export function AnalyticsInteractive({ metrics, workflow, teams, summary }: AnalyticsInteractiveProps) {
   const [activePanel, setActivePanel] = useState<"metrics" | "workflow" | "teams">("metrics");
 
+  const workflowChartData = useMemo(
+    () => workflow.map((item) => ({ name: item.label, value: item.value, color: item.color })),
+    [workflow],
+  );
+
   const strongestTeam = useMemo(
     () => [...teams].sort((a, b) => parseInt(b.load, 10) - parseInt(a.load, 10))[0],
     [teams],
   );
+
+  const teamChartData = useMemo(
+    () => teams.map((team) => ({ name: team.name, value: team.members, color: team.color })),
+    [teams],
+  );
+
+  const chartColorMap: Record<string, string> = {
+    "bg-blue-600": "#2563eb",
+    "bg-indigo-600": "#4f46e5",
+    "bg-amber-500": "#f59e0b",
+    "bg-emerald-600": "#059669",
+    "bg-emerald-500": "#10b981",
+    "bg-blue-500": "#3b82f6",
+    "bg-violet-500": "#8b5cf6",
+    "bg-cyan-500": "#06b6d4",
+    "bg-rose-500": "#f43f5e",
+    "bg-indigo-500": "#6366f1",
+    "bg-orange-500": "#f97316",
+  };
 
   return (
     <div className="space-y-6">
@@ -69,25 +94,56 @@ export function AnalyticsInteractive({ metrics, workflow, teams, summary }: Anal
       )}
 
       {activePanel === "workflow" && (
-        <section className="rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm">
-          <div className="mb-5 flex items-center gap-3">
-            <TrendingUp className="h-5 w-5 text-emerald-600" />
-            <h2 className="font-bold text-slate-950">Workflow Throughput</h2>
-          </div>
-          <div className="space-y-5">
-            {workflow.map((item) => (
-              <div key={item.label}>
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="font-medium text-slate-700">{item.label}</span>
-                  <span className="font-semibold text-slate-950">{item.value}</span>
+        <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
+          <section className="rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm">
+            <div className="mb-5 flex items-center gap-3">
+              <TrendingUp className="h-5 w-5 text-emerald-600" />
+              <h2 className="font-bold text-slate-950">Workflow Throughput</h2>
+            </div>
+            <div className="space-y-5">
+              {workflow.map((item) => (
+                <div key={item.label}>
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="font-medium text-slate-700">{item.label}</span>
+                    <span className="font-semibold text-slate-950">{item.value}</span>
+                  </div>
+                  <div className="h-3 rounded-full bg-slate-100">
+                    <div className={`h-3 rounded-full ${item.color}`} style={{ width: `${Math.min(item.value, 100)}%` }} />
+                  </div>
                 </div>
-                <div className="h-3 rounded-full bg-slate-100">
-                  <div className={`h-3 rounded-full ${item.color}`} style={{ width: `${Math.min(item.value, 100)}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm">
+            <div className="mb-5 flex items-center gap-3">
+              <BarChart3 className="h-5 w-5 text-brand-600" />
+              <h2 className="font-bold text-slate-950">Workflow Distribution</h2>
+            </div>
+            <div className="h-[320px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={workflowChartData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={65}
+                    outerRadius={100}
+                    paddingAngle={3}
+                  >
+                    {workflowChartData.map((entry) => (
+                      <Cell key={entry.name} fill={chartColorMap[entry.color] ?? "#64748b"} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => [`${value}`, "Tickets"]} />
+                  <Legend verticalAlign="bottom" height={36} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+        </div>
       )}
 
       {activePanel === "teams" && (
@@ -124,6 +180,27 @@ export function AnalyticsInteractive({ metrics, workflow, teams, summary }: Anal
             <p className="mt-6 text-xs uppercase tracking-[0.2em] text-slate-400">Priority risk</p>
             <p className="mt-2 text-xl font-semibold">{summary.priorityRisk}</p>
             <p className="mt-2 text-sm leading-6 text-slate-300">{summary.riskSummary}</p>
+
+            <div className="mt-6 h-[220px] rounded-2xl bg-white/5 p-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={teamChartData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={75}
+                  >
+                    {teamChartData.map((entry) => (
+                      <Cell key={entry.name} fill={chartColorMap[entry.color] ?? "#94a3b8"} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => [`${value}`, "Members"]} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </section>
         </div>
       )}
