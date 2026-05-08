@@ -1,127 +1,236 @@
-import { AlertCircle, CheckCircle2, Clock3, Plus, Ticket, Users } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  BarChart3,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  Filter,
+  Gauge,
+  MessageSquare,
+  ShieldCheck,
+  Sparkles,
+  Ticket,
+} from "lucide-react";
 
-const stats = [
-  { label: "Open Tickets", value: "24", icon: Ticket, color: "bg-brand-50 text-brand-700" },
-  { label: "In Progress", value: "12", icon: Clock3, color: "bg-amber-50 text-amber-700" },
-  { label: "Resolved Today", value: "8", icon: CheckCircle2, color: "bg-emerald-50 text-emerald-700" },
-  { label: "Active Agents", value: "5", icon: Users, color: "bg-slate-100 text-slate-700" },
-];
+import { DashboardShell } from "../components/dashboard-shell";
+import { getDashboardData } from "../lib/dashboard";
 
-const tickets = [
-  {
-    id: "TCK-1001",
-    title: "Unable to access payroll dashboard",
-    requester: "Sarah Johnson",
-    priority: "High",
-    status: "Open",
-  },
-  {
-    id: "TCK-1002",
-    title: "Laptop VPN disconnects frequently",
-    requester: "Michael Chen",
-    priority: "Medium",
-    status: "In Progress",
-  },
-  {
-    id: "TCK-1003",
-    title: "New employee software access request",
-    requester: "Ava Patel",
-    priority: "Low",
-    status: "Resolved",
-  },
-];
+export const dynamic = "force-dynamic";
 
-export default function HomePage() {
+const metricIcons = {
+  Ticket,
+  ShieldCheck,
+  Clock3,
+  Gauge,
+  BarChart3,
+};
+
+function getPriorityClass(priority: string) {
+  switch (priority) {
+    case "Critical":
+      return "bg-red-50 text-red-700 ring-red-200";
+    case "High":
+      return "bg-orange-50 text-orange-700 ring-orange-200";
+    case "Medium":
+      return "bg-amber-50 text-amber-700 ring-amber-200";
+    default:
+      return "bg-slate-100 text-slate-700 ring-slate-200";
+  }
+}
+
+export default async function HomePage() {
+  const data = await getDashboardData();
+  const metrics = data.metrics.map((metric) => ({
+    ...metric,
+    icon: metricIcons[metric.icon as keyof typeof metricIcons] ?? BarChart3,
+  }));
+  const tickets = data.tickets;
+  const workflow = data.workflow;
+  const teams = data.teams;
+
   return (
-    <main className="min-h-screen bg-slate-50">
-      <section className="border-b bg-white">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-brand-600">Ticket System</p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
-              Enterprise Ticket Management
-            </h1>
-            <p className="mt-3 max-w-2xl text-slate-600">
-              This is your first visible dashboard page. Next, we will connect these cards to MongoDB using Prisma.
-            </p>
-          </div>
-
-          <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700">
-            <Plus className="h-4 w-4" />
-            Create Ticket
-          </button>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 py-8">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => {
-            const Icon = stat.icon;
-
-            return (
-              <div key={stat.label} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">{stat.label}</p>
-                    <p className="mt-2 text-3xl font-bold text-slate-950">{stat.value}</p>
+    <DashboardShell
+      activePath="/"
+      eyebrow="Operations Dashboard"
+      title="Service Command Center"
+      description="A live enterprise incident workspace powered by MongoDB-backed dashboard collections."
+      connectionNote={`Live dashboard data is loading from ${data.source.databaseName} using ${data.source.collections.length} backend collections.`}
+    >
+            <section className="overflow-hidden rounded-3xl bg-slate-950 p-6 text-white shadow-xl shadow-slate-300/40">
+              <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr] lg:items-center">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-medium text-slate-200">
+                    <Activity className="h-3.5 w-3.5 text-emerald-400" />
+                    Live enterprise operations overview
                   </div>
-                  <div className={`rounded-lg p-3 ${stat.color}`}>
-                    <Icon className="h-5 w-5" />
+                  <h2 className="mt-5 max-w-2xl text-3xl font-bold tracking-tight md:text-4xl">
+                    Resolve high-impact incidents before they affect business continuity.
+                  </h2>
+                  <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300">
+                    A centralized ITSM dashboard for incident intake, SLA tracking, agent workload, and executive
+                    visibility. This enterprise view is now powered by MongoDB-backed server data.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/10 p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-slate-300">Priority Risk</p>
+                      <p className="mt-1 text-3xl font-bold">{data.summary.priorityRisk}</p>
+                    </div>
+                    <AlertTriangle className="h-9 w-9 text-amber-300" />
                   </div>
+                  <div className="mt-5 h-2 rounded-full bg-white/10">
+                    <div className="h-2 w-2/3 rounded-full bg-gradient-to-r from-emerald-400 via-amber-300 to-red-400" />
+                  </div>
+                  <p className="mt-3 text-xs text-slate-300">{data.summary.riskSummary}</p>
                 </div>
               </div>
-            );
-          })}
-        </div>
+            </section>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[2fr_1fr]">
-          <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b px-5 py-4">
-              <h2 className="text-lg font-semibold text-slate-950">Recent Tickets</h2>
-              <p className="text-sm text-slate-500">Sample tickets for the first dashboard screen.</p>
-            </div>
+            <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {metrics.map((metric) => {
+                const Icon = metric.icon;
 
-            <div className="divide-y">
-              {tickets.map((ticket) => (
-                <div key={ticket.id} className="grid gap-3 px-5 py-4 md:grid-cols-[1fr_auto] md:items-center">
-                  <div>
-                    <p className="text-sm font-semibold text-brand-600">{ticket.id}</p>
-                    <h3 className="mt-1 font-semibold text-slate-950">{ticket.title}</h3>
-                    <p className="mt-1 text-sm text-slate-500">Requester: {ticket.requester}</p>
+                return (
+                  <div key={metric.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-slate-500">{metric.label}</p>
+                        <p className="mt-2 text-3xl font-bold tracking-tight text-slate-950">{metric.value}</p>
+                      </div>
+                      <div className={`rounded-xl bg-gradient-to-br ${metric.accent} p-3 text-white shadow-sm`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                    </div>
+                    <div className="mt-5 flex items-center justify-between text-sm">
+                      <span className="font-semibold text-emerald-600">{metric.change}</span>
+                      <span className="text-slate-500">{metric.helper}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2 md:justify-end">
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-                      {ticket.priority}
-                    </span>
-                    <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">
-                      {ticket.status}
-                    </span>
+                );
+              })}
+            </section>
+
+            <section className="mt-6 grid gap-6 xl:grid-cols-[1.7fr_1fr]">
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="flex flex-col gap-4 border-b border-slate-200 p-5 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-950">Enterprise Ticket Queue</h2>
+                    <p className="mt-1 text-sm text-slate-500">Prioritized incidents from global business units. {data.summary.ticketCount} live records loaded.</p>
+                  </div>
+                  <button className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    <Filter className="h-4 w-4" />
+                    Filter Queue
+                  </button>
+                </div>
+
+                <div className="divide-y divide-slate-100">
+                  {tickets.map((ticket) => (
+                    <div key={ticket.code} className="grid gap-4 p-5 lg:grid-cols-[1fr_auto] lg:items-center">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-bold text-brand-600">{ticket.code}</span>
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${getPriorityClass(ticket.priority)}`}>
+                            {ticket.priority}
+                          </span>
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                            {ticket.status}
+                          </span>
+                        </div>
+                        <h3 className="mt-2 font-semibold text-slate-950">{ticket.title}</h3>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {ticket.requester} · {ticket.company}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-slate-600 lg:justify-end">
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-slate-400">Owner</p>
+                          <p className="font-semibold text-slate-800">{ticket.owner}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-slate-400">SLA</p>
+                          <p className="font-semibold text-red-600">{ticket.sla}</p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-slate-300" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h2 className="text-lg font-bold text-slate-950">Workflow Throughput</h2>
+                  <p className="mt-1 text-sm text-slate-500">Ticket movement across operational stages from MongoDB-backed workflow records.</p>
+                  <div className="mt-5 space-y-4">
+                    {workflow.map((item) => (
+                      <div key={item.label}>
+                        <div className="mb-2 flex items-center justify-between text-sm">
+                          <span className="font-medium text-slate-700">{item.label}</span>
+                          <span className="font-semibold text-slate-950">{item.value}</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-slate-100">
+                          <div className={`h-2 rounded-full ${item.color}`} style={{ width: `${Math.min(item.value, 100)}%` }} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          <aside className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-red-50 p-2 text-red-600">
-                <AlertCircle className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="font-semibold text-slate-950">Backend Status</h2>
-                <p className="text-sm text-slate-500">Foundation ready, API routes starting</p>
-              </div>
-            </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-emerald-50 p-3 text-emerald-700">
+                      <CheckCircle2 className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-slate-950">Backend Connection</h2>
+                      <p className="text-sm text-slate-500">Live MongoDB records loaded into the UI</p>
+                    </div>
+                  </div>
+                  <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+                    <p className="font-semibold text-slate-900">Current backend collections:</p>
+                    <ul className="mt-2 space-y-1">
+                      {data.source.collections.map((collection) => (
+                        <li key={collection}>• {collection}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
 
-            <ol className="mt-5 space-y-3 text-sm text-slate-600">
-              <li>1. Prisma schema is ready.</li>
-              <li>2. MongoDB env is ready.</li>
-              <li>3. Health API route is added.</li>
-              <li>4. Ticket CRUD APIs come next.</li>
-            </ol>
-          </aside>
-        </div>
-      </section>
-    </main>
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="h-5 w-5 text-brand-600" />
+                    <h2 className="font-bold text-slate-950">Enterprise Polish</h2>
+                  </div>
+                  <div className="mt-4 space-y-4">
+                    {teams.map((team) => (
+                      <div key={team.name} className="rounded-xl border border-slate-100 p-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-semibold text-slate-800">{team.name}</span>
+                          <span className="text-slate-500">{team.members} agents</span>
+                        </div>
+                        <div className="mt-3 h-2 rounded-full bg-slate-100">
+                          <div className={`h-2 rounded-full ${team.color}`} style={{ width: team.load }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <MessageSquare className="h-5 w-5 text-brand-600" />
+                    <h2 className="font-bold text-slate-950">Executive Notes</h2>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-slate-600">
+                    This enterprise layout is now reading seeded records from MongoDB through the backend. The dashboard API is available at{" "}
+                    <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">/api/dashboard</code>.
+                  </p>
+                </div>
+              </div>
+            </section>
+    </DashboardShell>
   );
 }

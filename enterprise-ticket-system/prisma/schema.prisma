@@ -7,61 +7,59 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  ADMIN
-  AGENT
-  USER
-}
-
-enum TicketStatus {
-  OPEN
-  IN_PROGRESS
-  RESOLVED
-  CLOSED
-}
-
-enum TicketPriority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
-model User {
-  id              String    @id @default(auto()) @map("_id") @db.ObjectId
-  name            String
-  email           String    @unique
-  passwordHash    String
-  role            Role      @default(USER)
-  createdTickets  Ticket[]  @relation("CreatedTickets")
-  assignedTickets Ticket[]  @relation("AssignedTickets")
-  comments        Comment[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-}
-
-model Ticket {
-  id          String         @id @default(auto()) @map("_id") @db.ObjectId
-  title       String
-  description String
-  status      TicketStatus   @default(OPEN)
-  priority    TicketPriority @default(MEDIUM)
-  creatorId   String         @db.ObjectId
-  creator     User           @relation("CreatedTickets", fields: [creatorId], references: [id])
-  assigneeId  String?        @db.ObjectId
-  assignee    User?          @relation("AssignedTickets", fields: [assigneeId], references: [id])
-  comments    Comment[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-}
-
-model Comment {
+model DashboardMetric {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  body      String
-  ticketId  String   @db.ObjectId
-  ticket    Ticket   @relation(fields: [ticketId], references: [id])
-  authorId  String   @db.ObjectId
-  author    User     @relation(fields: [authorId], references: [id])
+  label     String
+  value     String
+  change    String
+  helper    String
+  icon      String
+  accent    String
+  sortOrder Int      @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("dashboard_metrics")
+}
+
+model DashboardTicket {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  code      String   @unique
+  title     String
+  requester String
+  company   String
+  priority  String
+  status    String
+  owner     String
+  sla       String
+  sortOrder Int      @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dashboard_tickets")
+}
+
+model WorkflowStage {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  label     String
+  value     Int
+  color     String
+  sortOrder Int      @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dashboard_workflow_stages")
+}
+
+model SupportTeam {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique
+  load      String
+  members   Int
+  color     String
+  sortOrder Int      @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dashboard_teams")
 }
