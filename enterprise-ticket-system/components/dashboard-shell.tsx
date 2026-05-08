@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Bell, LifeBuoy, Plus, Search, ShieldCheck } from "lucide-react";
+import { Bell, LifeBuoy, ShieldCheck } from "lucide-react";
 
+import { HeaderActions } from "./header-actions";
 import { navigationItems } from "../lib/navigation";
 
 type DashboardShellProps = {
@@ -74,22 +75,13 @@ export function DashboardShell({
                 <p className="mt-1 text-sm text-slate-500">{description}</p>
               </div>
 
-              <div className="hidden flex-1 justify-center md:flex">
-                <div className="flex w-full max-w-md items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-slate-500">
-                  <Search className="h-4 w-4" />
-                  <span className="text-sm">Search tickets, users, departments...</span>
-                </div>
-              </div>
-
               <div className="flex items-center gap-3">
                 <button className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 shadow-sm hover:bg-slate-50">
                   <Bell className="h-5 w-5" />
                 </button>
-                <button className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700">
-                  <Plus className="h-4 w-4" />
-                  New Ticket
-                </button>
               </div>
+
+              <HeaderActions activePath={activePath} />
             </div>
           </header>
 
